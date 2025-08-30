@@ -36,11 +36,13 @@ r.post('/api/bookings', async (req,res)=>{
 
 // Public: eigene Buchungen (nur zukünftige)
 r.get('/api/bookings/me', async (req,res)=>{
-  if (!req.user || req.user.role !== 'customer') return res.status(401).json({ error:'Not logged in' })
+  const userEmail = req.headers['x-user-email'] as string
+  const userRole = req.headers['x-user-role'] as string
+  if (!userEmail || userRole !== 'customer') return res.status(401).json({ error:'Not logged in' })
   const list = await db.booking.findMany({
     where:{ 
       tenantId: tenantId(req), 
-      customerEmail: req.user.email, 
+      customerEmail: userEmail, 
       status:'CONFIRMED',
       startAt: { gte: new Date() } // nur zukünftige Termine
     },
@@ -55,13 +57,15 @@ r.delete('/api/bookings/:id', async (req,res)=>{
   const t = tenantId(req)
   const b = await db.booking.findUnique({ where:{ id } })
   if (!b || b.tenantId !== t) return res.status(404).json({ error:'Not found' })
-  const asCustomer = !!req.user && req.user.role === 'customer'
+  const userEmail = req.headers['x-user-email'] as string
+  const userRole = req.headers['x-user-role'] as string
+  const asCustomer = userRole === 'customer'
   if (asCustomer) {
-    if (req.user!.email !== b.customerEmail) return res.status(403).json({ error:'Forbidden' })
+    if (userEmail !== b.customerEmail) return res.status(403).json({ error:'Forbidden' })
     const diffH = (b.startAt.getTime() - Date.now()) / 36e5
     if (diffH < 24) return res.status(400).json({ error:'Too late to cancel (<24h)' })
   }
-  await db.booking.update({ where:{ id }, data:{ status:'CANCELLED', cancelledBy: req.user?.email ?? 'system' } })
+  await db.booking.update({ where:{ id }, data:{ status:'CANCELLED', cancelledBy: userEmail ?? 'system' } })
   // TODO: Warteliste prüfen, ggf. Mail
   res.status(204).send()
 })
@@ -104,7 +108,7 @@ r.post('/api/admin/bookings', requireRole(['owner','admin']), async (req,res)=>{
   })
   if (overlap) return res.status(409).json({ error:'Overlap' })
   const created = await db.booking.create({
-    data:{ tenantId:t, serviceId, staffId, startAt:startDate, endAt:endDate, customerEmail, status:'CONFIRMED', createdBy: req.user?.email ?? null }
+    data:{ tenantId:t, serviceId, staffId, startAt:startDate, endAt:endDate, customerEmail, status:'CONFIRMED', createdBy: req.headers['x-user-email'] as string ?? null }
   })
   res.status(201).json(created)
 })
@@ -114,7 +118,7 @@ r.delete('/api/admin/bookings/:id', requireRole(['owner','admin']), async (req,r
   const t = tenantId(req)
   const b = await db.booking.findUnique({ where:{ id } })
   if (!b || b.tenantId !== t) return res.status(404).json({ error:'Not found' })
-  await db.booking.update({ where:{ id }, data:{ status:'CANCELLED', cancelledBy: req.user?.email ?? 'admin' } })
+  await db.booking.update({ where:{ id }, data:{ status:'CANCELLED', cancelledBy: req.headers['x-user-email'] as string ?? 'admin' } })
   // TODO: Warteliste benachrichtigen
   res.status(204).send()
 })

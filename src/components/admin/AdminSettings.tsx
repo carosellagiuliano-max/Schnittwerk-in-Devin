@@ -25,8 +25,14 @@ import {
   Edit3,
   Upload,
   Eye,
-  EyeOff
+  EyeOff,
+  Users,
+  Repeat,
+  UserCheck
 } from 'lucide-react';
+import GroupBookingManagement from './GroupBookingManagement';
+import RecurringBookingManagement from './RecurringBookingManagement';
+import StaffPortfolioManagement from './StaffPortfolioManagement';
 
 const businessHours = [
   { day: 'Montag', open: '09:00', close: '18:00', isOpen: true },
@@ -159,7 +165,7 @@ export function AdminSettings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="profile" className="gap-2">
             <User className="w-4 h-4" />
             Profil
@@ -179,6 +185,18 @@ export function AdminSettings() {
           <TabsTrigger value="system" className="gap-2">
             <Settings className="w-4 h-4" />
             System
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="gap-2">
+            <Users className="w-4 h-4" />
+            Gruppen
+          </TabsTrigger>
+          <TabsTrigger value="recurring" className="gap-2">
+            <Repeat className="w-4 h-4" />
+            Wiederholung
+          </TabsTrigger>
+          <TabsTrigger value="portfolio" className="gap-2">
+            <UserCheck className="w-4 h-4" />
+            Portfolio
           </TabsTrigger>
         </TabsList>
 
@@ -654,6 +672,18 @@ export function AdminSettings() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="groups" className="space-y-6">
+          <GroupBookingManagement />
+        </TabsContent>
+
+        <TabsContent value="recurring" className="space-y-6">
+          <RecurringBookingManagement />
+        </TabsContent>
+
+        <TabsContent value="portfolio" className="space-y-6">
+          <StaffPortfolioManagement />
         </TabsContent>
       </Tabs>
     </div>
