@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from '@/hooks/use-toast'
 import HaircutLengthDialog from './haircut-length-dialog'
 import AdditionalServicesDialog from './additional-services-dialog'
+import WaitingListDialog from '@/components/customer/WaitingListDialog'
 
 // Using existing team owner image for Vanessa
 import vanessaLogo from '@/assets/team-owner.jpg'
@@ -77,6 +78,7 @@ export function AppointmentBookingDialog({
   const [showHaircutDialog, setShowHaircutDialog] = useState(false)
   const [showAdditionalDialog, setShowAdditionalDialog] = useState(false)
   const [selectedAdditionalServices, setSelectedAdditionalServices] = useState<any[]>([])
+  const [showWaitingListDialog, setShowWaitingListDialog] = useState(false)
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date)
@@ -114,29 +116,69 @@ export function AppointmentBookingDialog({
     setShowAdditionalDialog(true)
   }
 
-  const handleAdditionalServicesConfirm = (additionalServices: any[]) => {
+  const handleAdditionalServicesConfirm = async (additionalServices: any[]) => {
     setSelectedAdditionalServices(additionalServices)
     setShowAdditionalDialog(false)
     
-    const additionalCost = additionalServices.reduce((sum, service) => 
-      sum + parseInt(service.price.replace('CHF ', '')), 0
-    )
-
-    const bookingDetails = {
-      date: format(selectedDate!, 'dd.MM.yyyy'),
-      time: selectedTime,
-      hairdresser: hairdressers.find(h => h.id === selectedHairdresser)?.name ?? '',
-      haircut: selectedHaircut?.name ?? '',
-      additionalServices: additionalServices.map(s => s.name).join(', '),
-      totalAdditionalCost: additionalCost
+    if (!selectedDate || !selectedTime || !selectedHairdresser || !selectedHaircut) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte füllen Sie alle Felder aus',
+        variant: 'destructive'
+      })
+      return
     }
 
-    toast({
-      title: 'Termin erfolgreich gebucht!',
-      description: `Ihr Termin am ${bookingDetails.date} um ${bookingDetails.time} bei ${bookingDetails.hairdresser} wurde gebucht.`
-    })
+    try {
+      const startDateTime = new Date(selectedDate)
+      const [hours, minutes] = selectedTime.split(':').map(Number)
+      startDateTime.setHours(hours, minutes, 0, 0)
 
-    // Reset all states
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': 'customer',
+          'x-user-email': 'customer@dev.local',
+          'x-tenant-id': 't_dev'
+        },
+        body: JSON.stringify({
+          serviceId: selectedHaircut.id,
+          staffId: selectedHairdresser,
+          start: startDateTime.toISOString(),
+          customerEmail: 'customer@dev.local'
+        })
+      })
+
+      if (response.ok) {
+        const bookingDetails = {
+          date: format(selectedDate, 'dd.MM.yyyy'),
+          time: selectedTime,
+          hairdresser: hairdressers.find(h => h.id === selectedHairdresser)?.name ?? '',
+          haircut: selectedHaircut?.name ?? ''
+        }
+
+        toast({
+          title: 'Termin erfolgreich gebucht!',
+          description: `Ihr Termin am ${bookingDetails.date} um ${bookingDetails.time} bei ${bookingDetails.hairdresser} wurde gebucht.`
+        })
+      } else {
+        const error = await response.json()
+        toast({
+          title: 'Fehler beim Buchen',
+          description: error.error || 'Fehler beim Buchen des Termins',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Booking error:', error)
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Buchen des Termins',
+        variant: 'destructive'
+      })
+    }
+
     setStep('gender')
     setSelectedGender(null)
     setSelectedHaircut(null)
@@ -353,6 +395,13 @@ export function AppointmentBookingDialog({
                 <Button variant="outline" onClick={resetBooking} className="flex-1">
                   Zurück
                 </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowWaitingListDialog(true)}
+                  className="flex-1"
+                >
+                  Warteliste
+                </Button>
                 <Button
                   className="flex-1"
                   disabled={
@@ -382,6 +431,11 @@ export function AppointmentBookingDialog({
         onClose={() => setShowAdditionalDialog(false)}
         onConfirm={handleAdditionalServicesConfirm}
         genderType={selectedGender || 'women'}
+      />
+
+      <WaitingListDialog 
+        isOpen={showWaitingListDialog}
+        onClose={() => setShowWaitingListDialog(false)}
       />
     </>
   )

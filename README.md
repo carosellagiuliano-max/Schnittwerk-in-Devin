@@ -1,5 +1,7 @@
 # Schnittwerk Your Style - Admin Dashboard
 
+<!-- Dummy change for testing PR workflow -->
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/af61227d-37d6-4d60-be1b-2001fe1ba413

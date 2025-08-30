@@ -9,10 +9,16 @@ import bookingsRouter from './routes/bookings'
 import customersRouter from './routes/customers'
 import settingsRouter from './routes/settings'
 import publicRouter from './routes/public'
+import groupBookingsRouter from './routes/group-bookings'
+import recurringBookingsRouter from './routes/recurring-bookings'
+import staffPortfolioRouter from './routes/staff-portfolio'
+import waitingListRouter from './routes/waiting-list'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+app.use('/uploads', express.static('uploads'))
 
 // Tenant (DEV: fixer Tenant - für Dev immer t_dev setzen)
 app.use((req, _res, next) => { 
@@ -41,5 +47,9 @@ app.use(bookingsRouter)
 app.use(customersRouter)
 app.use(settingsRouter)
 app.use(publicRouter)
+app.use(groupBookingsRouter)
+app.use(recurringBookingsRouter)
+app.use(staffPortfolioRouter)
+app.use(waitingListRouter)
 
 export default app
