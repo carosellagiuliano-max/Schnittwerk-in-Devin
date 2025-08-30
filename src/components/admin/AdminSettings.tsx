@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { api } from '@/lib/api';
 import { 
   Settings, 
   User, 
@@ -70,9 +71,14 @@ export function AdminSettings() {
   });
 
   const [hours, setHours] = useState(businessHours);
-  const [services, setServices] = useState(servicesList);
+  const [services, setServices] = useState<any[]>([]);
   const [newService, setNewService] = useState({ name: '', price: '', duration: '', category: 'Standard' });
   const [showPassword, setShowPassword] = useState(false);
+
+  // Services von der API laden
+  useEffect(() => {
+    api('/api/admin/services').then(setServices).catch(console.error)
+  }, [])
 
   const handleSaveAdminData = () => {
     console.log('Saving admin data:', adminData);
@@ -89,28 +95,54 @@ export function AdminSettings() {
     // Here you would save to database
   };
 
-  const handleAddService = () => {
+  const handleAddService = async () => {
     if (newService.name && newService.price && newService.duration) {
-      const service = {
-        id: Date.now(),
-        ...newService,
-        price: parseFloat(newService.price),
-        duration: parseInt(newService.duration),
-        active: true
-      };
-      setServices([...services, service]);
-      setNewService({ name: '', price: '', duration: '', category: 'Standard' });
+      try {
+        const created = await api('/api/admin/services', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            name: newService.name, 
+            durationMin: +newService.duration, 
+            priceCents: Math.round(+newService.price * 100),
+            category: newService.category 
+          })
+        })
+        setServices((prev) => [...prev, created])
+        setNewService({ name: '', price: '', duration: '', category: 'Standard' });
+      } catch (error) {
+        console.error('Fehler beim Erstellen des Services:', error)
+      }
     }
   };
 
-  const handleDeleteService = (id: number) => {
-    setServices(services.filter(s => s.id !== id));
+  const handleDeleteService = async (id: string) => {
+    try {
+      await api(`/api/admin/services/${id}`, { method: 'DELETE' })
+      setServices((prev) => prev.filter(s => s.id !== id))
+    } catch (error) {
+      console.error('Fehler beim Löschen des Services:', error)
+    }
   };
 
-  const toggleServiceActive = (id: number) => {
-    setServices(services.map(s => 
-      s.id === id ? { ...s, active: !s.active } : s
-    ));
+  const toggleServiceActive = async (id: string) => {
+    const service = services.find(s => s.id === id)
+    if (!service) return
+    
+    try {
+      const updated = await api(`/api/admin/services/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: service.name,
+          durationMin: service.durationMin,
+          priceCents: service.priceCents,
+          category: service.category,
+          active: !service.active
+        })
+      })
+      setServices((prev) => prev.map(s => s.id === id ? updated : s))
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren des Services:', error)
+    }
   };
 
   return (
@@ -526,9 +558,9 @@ export function AdminSettings() {
                       <div>
                         <h4 className="font-medium">{service.name}</h4>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>CHF {service.price}</span>
-                          <span>{service.duration} Min</span>
-                          <Badge variant="outline">{service.category}</Badge>
+                          <span>CHF {(service.priceCents/100).toFixed(2)}</span>
+                          <span>{service.durationMin} Min</span>
+                          <Badge variant="outline">{service.category || 'Standard'}</Badge>
                         </div>
                       </div>
                     </div>

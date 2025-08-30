@@ -1,0 +1,163 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String   @unique
+  plan      String
+  theme     String?
+  createdAt DateTime @default(now())
+
+  profiles  Profile[]
+  services  Service[]
+  staff     Staff[]
+  bookings  Booking[]
+  timeOffs  TimeOff[]
+  schedules Schedule[]
+  bans      CustomerBan[]
+  waitings  WaitingList[]
+  staffServices StaffService[]
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  tenantId     String
+  email        String
+  role         String   // owner|admin|staff|customer
+  fullName     String?
+  phone        String?
+  createdAt    DateTime @default(now())
+  totalRevenue Int      @default(0)
+  status       String   @default("neu") // neu|bronze|silber|gold|diamant
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  durationMin Int
+  priceCents  Int
+  category    String?
+  active      Boolean  @default(true)
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  serviceLinks StaffService[]
+  waitings    WaitingList[]
+
+  @@unique([tenantId, name])
+}
+
+model Staff {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  active       Boolean  @default(true)
+  imageUrl     String?
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings     Booking[]
+  schedules    Schedule[]
+  timeOffs     TimeOff[]
+  serviceLinks StaffService[]
+}
+
+model StaffService {
+  staffId   String
+  serviceId String
+  tenantId  String
+
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([staffId, serviceId])
+  @@index([tenantId])
+}
+
+model Schedule {
+  id        String  @id @default(cuid())
+  tenantId  String
+  staffId   String
+  weekday   Int     // 0=Mon ... 6=Sun
+  startMin  Int
+  endMin    Int
+
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, weekday, startMin, endMin])
+}
+
+model TimeOff {
+  id        String   @id @default(cuid())
+  tenantId  String
+  staffId   String
+  dateFrom  DateTime
+  dateTo    DateTime
+  reason    String?
+
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  tenantId      String
+  serviceId     String
+  staffId       String
+  customerEmail String
+  startAt       DateTime
+  endAt         DateTime
+  status        String   // CONFIRMED|CANCELLED
+  createdBy     String?
+  cancelledBy   String?
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service  Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  staff    Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, staffId, startAt])
+}
+
+model CustomerBan {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+}
+
+model WaitingList {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  email         String
+  phone         String?
+  serviceId     String
+  preferredDate DateTime
+  preferredTime String?
+  flexible      Boolean  @default(false)
+  priority      String   @default("medium")
+  createdAt     DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, serviceId, preferredDate])
+}

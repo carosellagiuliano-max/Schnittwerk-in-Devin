@@ -1,8 +1,144 @@
-# Welcome to your Lovable project
+# Schnittwerk Your Style - Admin Dashboard
 
 ## Project info
 
 **URL**: https://lovable.dev/projects/af61227d-37d6-4d60-be1b-2001fe1ba413
+
+Ein vollständiges Salon-Management-System mit Multi-Tenant-Backend und modernem Frontend.
+
+## DEV Setup & Start
+
+### Backend & Database Setup
+
+```bash
+# Dependencies installieren
+npm install
+
+# Datenbank migrieren
+npx prisma migrate dev --name init
+
+# Test-Daten erstellen
+npx tsx prisma/seed.ts
+
+# Backend API starten (Port 3000)
+npm run dev:server
+
+# Frontend starten (Port 5173) 
+npm run dev
+
+# Oder beide gleichzeitig
+npm run dev:all
+```
+
+### DEV Authentication
+
+Für API-Calls im Admin-Bereich werden diese Header verwendet:
+- `x-user-role: admin`
+- `x-user-email: admin@dev.local`
+
+Diese werden automatisch vom Frontend hinzugefügt.
+
+### Environment Variables
+
+**`.env.local`** (Development):
+```env
+DEV_MODE=1
+TZ=Europe/Zurich
+DATABASE_URL="file:./dev.db"
+```
+
+### API Testing
+
+**Lokaler Ping:** 
+```bash
+# Server starten
+npm run dev:server
+
+# Health Check
+curl http://127.0.0.1:3000/api/ping
+```
+
+**In der Sandbox/CI:** Kein echter Server nötig – Tests nutzen supertest.
+
+```bash
+# Services laden (Admin)
+curl -H "x-user-role: admin" -H "x-user-email: admin@dev.local" http://localhost:3000/api/admin/services
+
+# Service erstellen
+curl -X POST -H "Content-Type: application/json" -H "x-user-role: admin" -H "x-user-email: admin@dev.local" \
+  -d '{"name":"Haarschnitt","durationMin":45,"priceCents":6500}' \
+  http://localhost:3000/api/admin/services
+```
+
+## Technologie Stack
+
+**Frontend:**
+- Vite + React + TypeScript
+- shadcn/ui + Tailwind CSS
+- React Router + TanStack Query
+
+**Backend:**
+- Express.js + TypeScript
+- Prisma + SQLite (DEV) / PostgreSQL (PROD)
+- Multi-Tenant Architektur
+
+**Testing:**
+- Vitest + Supertest
+
+## API Endpoints
+
+### Public Routes
+- `GET /api/services` - Aktive Services
+- `GET /api/staff` - Aktives Personal
+- `POST /api/bookings` - Termine buchen
+- `DELETE /api/bookings/:id` - Termine stornieren
+
+### Admin Routes
+- `GET/POST/PUT/DELETE /api/admin/services` - Service Management
+- `GET/POST/PUT/DELETE /api/admin/staff` - Personal Management
+- `GET/POST/PUT/DELETE /api/admin/staff/:staffId/schedules` - Arbeitszeiten
+- `GET/POST/PUT/DELETE /api/admin/staff/:staffId/timeoff` - Urlaub/Auszeiten
+- `GET/POST/DELETE /api/admin/bookings` - Termine verwalten
+- `GET /api/admin/customers` - Kunden suchen
+- `POST/DELETE /api/admin/customers/ban` - Kunden sperren/entsperren
+
+## PRODUCTION Setup (Notizen)
+
+### Database
+- **Provider:** PostgreSQL (Supabase empfohlen)
+- **Migration:** `npx prisma migrate deploy`
+- **Environment:** `DATABASE_URL="postgresql://..."`
+
+### Authentication
+- **DEV:** Header-basiert (`x-user-role`, `x-user-email`)
+- **PROD:** JWT-basiert (Supabase Auth empfohlen)
+
+### Email
+- **DEV:** Console-Output (No-Op)
+- **PROD:** SMTP (nodemailer + Environment Vars)
+
+### Deployment
+- **Frontend:** Netlify/Vercel
+- **Backend:** Netlify Functions, Render, oder separater Service
+
+## Testing
+
+```bash
+# Alle Tests
+npm run test
+
+# Tests im Watch-Mode
+npm run test:watch
+```
+
+## Development Workflow
+
+1. **Feature Branch erstellen:** `git checkout -b feature-name`
+2. **Backend + Frontend implementieren**
+3. **Tests schreiben und ausführen:** `npm run test`
+4. **API manuell testen**
+5. **Commit & Push:** `git push origin feature-name`
+6. **Pull Request erstellen**
 
 ## How can I edit this code?
 
