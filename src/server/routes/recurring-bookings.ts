@@ -104,7 +104,7 @@ async function generateRecurringBookings(recurringBookingId: string, tenantId: s
   
   const now = new Date()
   const endDate = recurring.endDate || new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
-  let currentDate = new Date(recurring.startDate)
+  const currentDate = new Date(recurring.startDate)
   
   while (currentDate <= endDate) {
     if (currentDate >= now) {
